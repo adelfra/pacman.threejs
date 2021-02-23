@@ -1,0 +1,1295 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Pacman</title>
+		<link rel="shortcut icon" href="img/icon.jpg">
+	</head>
+<style>
+body {
+	margin: 0px;
+	overflow: hidden;
+}
+
+</style>
+	<body>
+		<div id="container"></div><!---id with use in thw init function -->
+			<canvas id="scene"></canvas>
+	    <script src="lib/three.min.js"></script>
+		<script src="lib/TrackballControls.js"></script>
+		<script src="lib/threex.pacman.js"></script>
+
+
+		<script>
+
+
+
+
+			var xPos = -25, yPos = 10, zPos = 5;//track where i in the scene to print all shapes
+
+			var xPosPacman, yPosPacman;//
+			var xGhostOne, yGhostOne;
+			var xGhostTwo, yGhostTwo;
+			var xGhostThree, yGhostThree;
+			var xGhostFour, yGhostFour;
+
+			var numSphere = 0;
+
+			var pacCanMove = 1;
+
+			var keyPress = 0;//in onkeydown unction 
+
+			var posMatrix = [];
+			for(var line = 0; line < 100; line++) {  //create doeble array to store in pos in matrix
+				posMatrix[line] = [];
+				for(var col = 0; col < 100; col++){
+					posMatrix[line][col] = [];
+				}
+			}
+
+
+			var pacman = new THREEx.Pacman( {text: ''} );//call the packman object we generated up //store in test packman us up in the function
+			pacman.rotation.x = 90 * Math.PI / 180;//make packman in the proper place(in the center)
+			pacman.scale.set(1, 1, 1);
+           var ghostOne = new THREEx.Pacman ({
+				shape: 'ghost',
+				text: '',
+				color: '#FF0000'//set color of every one
+			});
+			ghostOne.rotation.x = 90 * Math.PI / 180;//rotate
+			ghostOne.scale.set(0.8, 0.8, 0.8);
+
+			var ghostTwo = new THREEx.Pacman ({
+				shape: 'ghost',
+				text: '',
+				color: '#80F24B'
+			});
+			ghostTwo.rotation.x = 90 * Math.PI / 180;
+			ghostTwo.scale.set(0.8, 0.8, 0.8);
+
+			var ghostThree = new THREEx.Pacman ({
+				shape: 'ghost',
+				text: '',
+				color: '#F5902C'
+			});
+			ghostThree.rotation.x = 90 * Math.PI / 180;
+			ghostThree.scale.set(0.8, 0.8, 0.8);
+
+			var ghostFour = new THREEx.Pacman ({
+				shape: 'ghost',
+				text: '',
+				color: '#2C5BF5'
+			});
+			ghostFour.rotation.x = 90 * Math.PI / 180;
+			ghostFour.scale.set(0.8, 0.8, 0.8);
+
+			
+			init();
+
+			function init() {
+				scene = new THREE.Scene();
+
+
+
+				camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );//(angle,aspect ratio,near far)
+				camera.position.z = 28;
+				camera.position.y = -12.5;
+				scene.add(camera);
+
+				controls = new THREE.TrackballControls( camera );//TrackballControls similar to orbit control
+				controls.addEventListener( 'change', render ); //on change render again (call the function)
+
+				
+				
+
+				var geometryCube = new THREE.BoxGeometry( 1, 1, 1);//create the cube make the maze
+				var materialCube =  new THREE.MeshPhongMaterial( { color:0x800080, shading: THREE.FrontSide } );//MeshPhongMaterial: A material for shiny surfaces with specular highlights
+				var cube;
+
+				var geometrySphere = new THREE.SphereGeometry(0.2, 50, 50);//eat
+				var materialSphere = new THREE.MeshPhongMaterial( {color: 0xFFFF00, shading: THREE.FrontSide} );
+				var sphere;
+
+
+				// 1st line
+				line = 0; col = 0;
+				for(var i = 0; i < 50; i++) {
+					genMazeLine(1);//print one cube 
+					col++;
+				}
+
+				// 2nd line
+				line ++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 0 || i == 49)
+						genMazeLine(1);
+					else
+						genMazeLine(0);
+					col++;
+				}
+
+				// 3rd line
+				line ++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 1 || i == 12 || i == 23 || i == 26 || i == 37 || i == 48)
+						genMazeLine(0);
+					else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 4th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 1 || i == 12 || i == 23 || i == 26 || i == 37 || i == 48)
+						genMazeLine(0);
+					else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 5th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 1 || (i >= 12 && i <= 23) || (i >= 26 && i <= 37) || i == 48)
+						genMazeLine(0);
+					else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 6th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 1 || i == 16 || i == 23 || i == 26 || i == 33 || i == 37 || i == 48)
+						genMazeLine(0);
+					else if(i == 12){//where i want to put packman
+						// pacman initial position
+						xPosPacman = xPos;
+						yPosPacman = yPos;
+						pacman.position.x = xPos;
+						pacman.position.y = yPos;
+						pacman.position.z = zPos;
+						pacman.updateMatrix();
+						pacman.matrixAutoUpdate = false;
+						scene.add(pacman);
+						xPos += 1;//after puting the pakman increment to move for create cube again
+						//pacman and ghosts are able to move here, but there is no sphere in this position
+						posMatrix[line][col] = 1;
+					} else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 7th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if((i >= 1 && i <= 12) || i == 16 ||  i == 23 || i == 26 || i == 33 || (i >= 37 && i <= 48))
+						genMazeLine(0);
+					else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 8th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 1 || i == 5 || i == 8 || i == 12 || i == 16 || (i >= 19 && i <= 30) || i == 33 || i == 37
+						 || i == 41 || i == 44 || i == 48)
+						genMazeLine(0);
+					else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 9th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 1 || i == 5 || i == 8 || i == 12 || (i >= 16 && i <= 19) || (i >= 30 && i <= 33) || i == 37
+						|| i == 41 || i == 44 || i == 48)
+						genMazeLine(0);
+					else if(i == 24 || i == 25) {
+						//ghosts can walk here but pacman can't
+						posMatrix[line][col] = 2;//were evals come up from (the out of there place) 
+						xPos += 1;
+					} else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 10th line
+				line ++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if((i >= 1 && i <= 5) || (i >= 8 && i <= 12) || i == 16 || i == 19 || i == 30 || i == 33 ||
+						 (i >= 37 && i <= 41) || (i >= 44 && i <= 48))
+						genMazeLine(0);
+					else if(i == 21 || i == 22 || (i >= 24 && i <= 26) || i == 28){
+						xPos += 1;
+						//ghosts can walk here but pacman can't
+						posMatrix[line][col] = 2;
+					} else if(i == 23){
+						// ghost one initial position
+						xGhostOne = xPos;
+						yGhostOne = yPos;
+						ghostOne.position.x = xPos;
+						ghostOne.position.y = yPos;
+						ghostOne.position.z = zPos;
+						ghostOne.updateMatrix();
+						ghostOne.matrixAutoUpdate = false;
+						scene.add(ghostOne);
+						xPos += 1;
+						//ghosts can walk here but pacman can't
+						posMatrix[line][col] = 2;
+					} else if(i == 27){
+						// ghost two initial position
+						xGhostTwo = xPos;
+						yGhostTwo = yPos;
+						ghostTwo.position.x = xPos;
+						ghostTwo.position.y = yPos;
+						ghostTwo.position.z = zPos;
+						ghostTwo.updateMatrix();
+						ghostTwo.matrixAutoUpdate = false;
+						scene.add(ghostTwo);
+						xPos += 1;
+						//ghosts can walk here but pacman can't
+						posMatrix[line][col] = 2;
+					} else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 11th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 1 || i == 5 || i == 8 || i == 12 || i == 16 || i == 19 || i == 30 || i == 33 || i == 37
+						 || i == 41 || i == 44 || i == 48)
+						genMazeLine(0);
+					else if(i == 21 || i == 23 || i == 24 || (i >= 26 && i <= 28)) {
+						xPos += 1;
+						//ghosts can walk here but pacman can't
+						posMatrix[line][col] = 2;
+					} else if(i == 22){
+						// ghost three initial position
+						xGhostThree = xPos;
+						yGhostThree = yPos;
+						ghostThree.position.x = xPos;
+						ghostThree.position.y = yPos;
+						ghostThree.position.z = zPos;
+						ghostThree.updateMatrix();
+						ghostThree.matrixAutoUpdate = false;
+						scene.add(ghostThree);
+						xPos += 1;
+						//ghosts can walk here but pacman can't
+						posMatrix[line][col] = 2;
+					} else if(i == 25){
+						// ghost four initial position
+						xGhostFour = xPos;
+						yGhostFour = yPos;
+						ghostFour.position.x = xPos;
+						ghostFour.position.y = yPos;
+						ghostFour.position.z = zPos;
+						ghostFour.updateMatrix();
+						ghostFour.matrixAutoUpdate = false;
+						scene.add(ghostFour);
+						xPos += 1;
+						//ghosts can walk here but pacman can't
+						posMatrix[line][col] = 2;
+					} else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 12th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 1 || i == 5 || i == 8 || i == 12 || i == 16 || i == 19 || i == 30 || i == 33
+						 || i == 37 || i == 41 || i == 44 || i == 48)
+						genMazeLine(0);
+					else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 13th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 1 || i == 5 || i == 8 || i == 12 || (i >= 16 && i <= 33) || i == 37 || i == 41
+						|| i == 44 || i == 48)
+						genMazeLine(0);
+					else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 14th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if((i >= 1 && i <= 12) || i == 16 || i == 19 || i == 30 || i == 33 || (i >= 37 && i <= 48))
+						genMazeLine(0);
+					else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 15th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 1 || i == 12 || i == 16 || (i >= 19 && i <= 30) || i == 33 || i == 37 || i == 48)
+						genMazeLine(0);
+					else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 16th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 1 || i == 12 || i == 16 || i == 22 || i == 27 || i == 33 || i == 37 || i == 48)
+						genMazeLine(0);
+					else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 17th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 1 || i == 12 || i == 16 || i == 22 || i == 27 || i == 33 || i == 37 || i == 48)
+						genMazeLine(0);
+					else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 18th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 1 || i == 12 || i == 16 || i == 22 || i == 27 || i == 33 || i == 37 || i == 48)
+						genMazeLine(0);
+					else
+						genMazeLine(1);
+					col++;
+				}
+
+				// 19th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					if(i == 0 || i == 49)
+						genMazeLine(1);
+					else
+						genMazeLine(0);
+					col++;
+				}
+
+				// 20th line
+				line++; col = 0;
+				updateMazeGenPos();
+				for(var i = 0; i < 50; i++) {
+					genMazeLine(1);
+					col++;
+				}
+
+				light = new THREE.DirectionalLight( 0x0FFFF0,10 );//create direct light(color , oppasity)
+				light.position.set( 50, -10, 100 );
+				scene.add( light );
+
+				light = new THREE.DirectionalLight( 0x0FF0F0,1 );
+				light.position.set( -100, 100, 100 );
+				scene.add( light );
+
+
+				renderer = new THREE.WebGLRenderer({canvas : document.getElementById('scene')});
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container = document.getElementById( 'container' );//id up
+				container.appendChild( renderer.domElement );
+				window.addEventListener( 'keydown', onKeyDown, false );
+			render();
+
+				ghostOneMovement();
+				ghostTwoMovement();
+				ghostThreeMovement();
+				ghostFourMovement();
+
+				// call the colision function
+
+
+				// call the first rendering
+				render();
+
+				// ---------------------------------------------
+				// ghost one movement function
+				// ---------------------------------------------
+				var iOne = 0; // counter variable
+				var jOne = 0;  // this variable is responsible for determing the max steps of direction
+				var flagOne = 0; // flag used to verify when is necessary to create another random
+				var dirOne; // random direction to where the ghost should move
+				function ghostOneMovement() {
+					// hardcoded initial movements to set the ghost in the desired initial place
+					if(iOne == 0) {
+						movGhostOneD(0);
+						iOne++;
+					} else if(iOne == 1) {
+						movGhostOneW(0);
+						iOne++;
+					} else if(iOne == 2) {
+						movGhostOneW(0);
+						iOne++;
+					} else {
+						// generate a random number to set the direction movement
+						if(flagOne == 0) {
+							dirOne = genRandomNumber();
+							flagOne = 1;
+						}
+
+						// if j hits the limit change the direction of the ghost
+						if(jOne == 4){
+							jOne = 0;
+							flagOne = 0;
+						}
+
+						// moves ghost to the generated direction until it hits a wall
+						if(flagOne == 1) {
+							if(dirOne == 1){
+								if(!movGhostOneW(1)){
+									flagOne = 0;
+								}
+								jOne++;
+							}
+							if(dirOne == 2){
+								if(!movGhostOneA(1)){
+									flagOne = 0;
+								}
+								jOne++;
+							}
+							if(dirOne == 3){
+								if(!movGhostOneS(1)){
+									flagOne = 0;
+								}
+								jOne++;
+							}
+							if(dirOne == 4){
+								if(!movGhostOneD(1)){
+									flagOne = 0;
+								}
+								jOne++;
+							}
+						}
+					}
+
+					// call recursevely the function to keep ghost moving
+					setTimeout(ghostOneMovement, 100);
+				}
+
+				// ---------------------------------------------
+				// ghost one auxiliary functions
+				// ---------------------------------------------
+				function movGhostOneW(flag) {
+					if(posMatrix[(10 - ghostOne.position.y) - 1][(ghostOne.position.x + 25)] == 1 && flag == 1) {///flag=1=>can move here & if postion of food
+						ghostOne.position.y = yGhostOne + 1;
+						yGhostOne = ghostOne.position.y;
+						ghostOne.updateMatrix();
+						render();
+						return true;
+					} else if(flag == 0) {
+						ghostOne.position.y = yGhostOne + 1;
+						yGhostOne = ghostOne.position.y;
+						ghostOne.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				function movGhostOneS(flag) {
+					if(posMatrix[(10 - ghostOne.position.y) + 1][(ghostOne.position.x + 25)] == 1 && flag == 1) { 
+						ghostOne.position.y = yGhostOne - 1;
+						yGhostOne = ghostOne.position.y;
+						ghostOne.updateMatrix();
+						render();
+						return true;
+					} else if (flag == 0) {
+						ghostOne.position.y = yGhostOne - 1;
+						yGhostOne = ghostOne.position.y;
+						ghostOne.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				function movGhostOneD(flag) {
+					if(posMatrix[(10 - ghostOne.position.y)][(ghostOne.position.x + 25) + 1] == 1 && flag == 1) {
+						ghostOne.position.x = xGhostOne + 1;
+						xGhostOne = ghostOne.position.x;
+						ghostOne.updateMatrix();
+						render();
+						return true;
+					} else if (flag == 0) {
+						ghostOne.position.x = xGhostOne + 1;
+						xGhostOne = ghostOne.position.x;
+						ghostOne.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				function movGhostOneA(flag) {
+					if(posMatrix[(10 - ghostOne.position.y)][(ghostOne.position.x + 25) - 1] == 1 && flag == 1) {
+						ghostOne.position.x = xGhostOne - 1;
+						xGhostOne = ghostOne.position.x;
+						ghostOne.updateMatrix();
+						render();
+						return true;
+					} else if (flag == 0) {
+						ghostOne.position.x = xGhostOne - 1;
+						xGhostOne = ghostOne.position.x;
+						ghostOne.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				// ---------------------------------------------
+				// ghost two movement function
+				// ---------------------------------------------
+				var iTwo = 0; // counter variable
+				var jTwo = 0;  // this variable is responsible for determing the max steps of direction
+				var flagTwo = 0; // flag used to verify when is necessary to create another random
+				var dirTwo; // random direction to where the ghost should move
+				function ghostTwoMovement() {
+					// hardcoded initial movements to set the ghost in the desired initial place
+					if(iTwo == 0) {
+						movGhostTwoA(0);
+						iTwo++;
+					} else if(iTwo == 1) {
+						movGhostTwoA(0);
+						iTwo++;
+					} else if(iTwo == 2) {
+						movGhostTwoW(0);
+						iTwo++;
+					} else if(iTwo == 3) {
+						movGhostTwoW(0);
+						iTwo++;
+					} else if(iTwo == 4) {
+						movGhostTwoD(0);
+						iTwo++;
+					} else if(iTwo == 5) {
+						movGhostTwoW(0);
+						iTwo++;
+					} else if(iTwo == 6) {
+						movGhostTwoW(0);
+						iTwo++;
+					} else if(iTwo == 7) {
+						movGhostTwoW(0);
+						iTwo++;
+					} else if(iTwo == 8) {
+						movGhostTwoW(0);
+						iTwo++;
+					} else if(iTwo == 9) {
+						movGhostTwoW(0);
+						iTwo++;
+					} else {
+						// generate a random number to set the direction movement
+						if(flagTwo == 0) {
+							dirTwo = genRandomNumber();
+							flagTwo = 1;
+						}
+
+						// if j hits the limit change the direction of the ghost
+						if(jTwo == 6){
+							jTwo = 0;
+							flagTwo = 0;
+						}
+
+						// moves ghost to the generated direction until it hits a wall
+						if(flagTwo == 1) {
+							if(dirTwo == 1){
+								if(!movGhostTwoW(1)){
+									flagTwo = 0;
+								}
+								jTwo++;
+							}
+							if(dirTwo == 2){
+								if(!movGhostTwoA(1)){
+									flagTwo = 0;
+								}
+								jTwo++;
+							}
+							if(dirTwo == 3){
+								if(!movGhostTwoS(1)){
+									flagTwo = 0;
+								}
+								jTwo++;
+							}
+							if(dirTwo == 4){
+								if(!movGhostTwoD(1)){
+									flagTwo = 0;
+								}
+								jTwo++;
+							}
+						}
+					}
+
+					// call recursevely the function to keep ghost moving
+					setTimeout(ghostTwoMovement, 100);
+				}
+
+				// ---------------------------------------------
+				// ghost two auxiliary functions
+				// ---------------------------------------------
+				function movGhostTwoW(flag) {
+					if(posMatrix[(10 - ghostTwo.position.y) - 1][(ghostTwo.position.x + 25)] == 1 && flag == 1) {
+						ghostTwo.position.y = yGhostTwo + 1;
+						yGhostTwo = ghostTwo.position.y;
+						ghostTwo.updateMatrix();
+						render();
+						return true;
+					} else if(flag == 0) {
+						ghostTwo.position.y = yGhostTwo + 1;
+						yGhostTwo = ghostTwo.position.y;
+						ghostTwo.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				function movGhostTwoS(flag) {
+					if(posMatrix[(10 - ghostTwo.position.y) + 1][(ghostTwo.position.x + 25)] == 1 && flag == 1) {
+						ghostTwo.position.y = yGhostTwo - 1;
+						yGhostTwo = ghostTwo.position.y;
+						ghostTwo.updateMatrix();
+						render();
+						return true;
+					} else if (flag == 0) {
+						ghostTwo.position.y = yGhostTwo - 1;
+						yGhostTwo = ghostTwo.position.y;
+						ghostTwo.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				function movGhostTwoD(flag) {
+					if(posMatrix[(10 - ghostTwo.position.y)][(ghostTwo.position.x + 25) + 1] == 1 && flag == 1) {
+						ghostTwo.position.x = xGhostTwo + 1;
+						xGhostTwo = ghostTwo.position.x;
+						ghostTwo.updateMatrix();
+						render();
+						return true;
+					} else if (flag == 0) {
+						ghostTwo.position.x = xGhostTwo + 1;
+						xGhostTwo = ghostTwo.position.x;
+						ghostTwo.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				function movGhostTwoA(flag) {
+					if(posMatrix[(10 - ghostTwo.position.y)][(ghostTwo.position.x + 25) - 1] == 1 && flag == 1) {
+						ghostTwo.position.x = xGhostTwo - 1;
+						xGhostTwo = ghostTwo.position.x;
+						ghostTwo.updateMatrix();
+						render();
+						return true;
+					} else if (flag == 0) {
+						ghostTwo.position.x = xGhostTwo - 1;
+						xGhostTwo = ghostTwo.position.x;
+						ghostTwo.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				// ---------------------------------------------
+				// ghost three movement function
+				// ---------------------------------------------
+				var iThree = 0; // counter variable
+				var jThree = 0;  // this variable is responsible for determing the max steps of direction
+				var flagThree = 0; // flag used to verify when is necessary to create another random
+				var dirThree; // random direction to where the ghost should move
+				function ghostThreeMovement() {
+					// hardcoded initial movements to set the ghost in the desired initial place
+					if(iThree == 0) {
+						movGhostThreeW(0);
+						iThree++;
+					} else if(iThree == 1) {
+						movGhostThreeD(0);
+						iThree++;
+					} else if(iThree == 2) {
+						movGhostThreeD(0);
+						iThree++;
+					} else if(iThree == 3) {
+						movGhostThreeW(0);
+						iThree++;
+					}else if(iThree == 4) {
+						movGhostThreeW(0);
+						iThree++;
+					} else if(iThree == 5) {
+						movGhostThreeA(0);
+						iThree++;
+					} else if(iThree == 6) {
+						movGhostThreeA(0);
+						iThree++;
+					} else if(iThree == 7) {
+						movGhostThreeA(0);
+						iThree++;
+					} else if(iThree == 8) {
+						movGhostThreeA(0);
+						iThree++;
+					} else if(iThree == 9) {
+						movGhostThreeA(0);
+						iThree++;
+					} else if(iThree == 10) {
+						movGhostThreeS(0);
+						iThree++;
+					} else if(iThree == 11) {
+						movGhostThreeS(0);
+						iThree++;
+					} else if(iThree == 12) {
+						movGhostThreeS(0);
+						iThree++;
+					} else if(iThree == 13) {
+						movGhostThreeS(0);
+						iThree++;
+					} else if(iThree == 14) {
+						movGhostThreeS(0);
+						iThree++;
+					} else if(iThree == 15) {
+						movGhostThreeA(0);
+						iThree++;
+					} else if(iThree == 16) {
+						movGhostThreeA(0);
+						iThree++;
+					} else if(iThree == 17) {
+						movGhostThreeA(0);
+						iThree++;
+					} else if(iThree == 18) {
+						movGhostThreeS(0);
+						iThree++;
+					} else if(iThree == 19) {
+						movGhostThreeS(0);
+						iThree++;
+					} else if(iThree == 20) {
+						movGhostThreeS(0);
+						iThree++;
+					} else if(iThree == 21) {
+						movGhostThreeS(0);
+						iThree++;
+					} else if(iThree == 22) {
+						movGhostThreeS(0);
+						iThree++;
+					} else if(iThree == 23) {
+						movGhostThreeS(0);
+						iThree++;
+					} else if(iThree == 24) {
+						movGhostThreeA(0);
+						iThree++;
+					} else if(iThree == 25) {
+						movGhostThreeA(0);
+						iThree++;
+					} else if(iThree == 26) {
+						movGhostThreeA(0);
+						iThree++;
+					} else if(iThree == 27) {
+						movGhostThreeA(0);
+						iThree++;
+					} else if(iThree == 28) {
+						movGhostThreeW(0);
+						iThree++;
+					} else if(iThree == 29) {
+						movGhostThreeW(0);
+						iThree++;
+					} else {
+						// generate a random number to set the direction movement
+						if(flagThree == 0) {
+							dirThree = genRandomNumber();
+							flagThree = 1;
+						}
+
+						// if j hits the limit change the direction of the ghost
+						if(jThree == 8){
+							jThree = 0;
+							flagThree = 0;
+						}
+
+						// moves ghost to the generated direction until it hits a wall
+						if(flagThree == 1) {
+							if(dirThree == 1){
+								if(!movGhostThreeW(1)){
+									flagThree = 0;
+								}
+								jThree++;
+							}
+							if(dirThree == 2){
+								if(!movGhostThreeA(1)){
+									flagThree = 0;
+								}
+								jThree++;
+							}
+							if(dirThree == 3){
+								if(!movGhostThreeS(1)){
+									flagThree = 0;
+								}
+								jThree++;
+							}
+							if(dirThree == 4){
+								if(!movGhostThreeD(1)){
+									flagThree = 0;
+								}
+								jThree++;
+							}
+						}
+					}
+
+					// call recursevely the function to keep ghost moving
+					setTimeout(ghostThreeMovement, 100);
+
+				}
+
+				// ---------------------------------------------
+				// ghost three auxiliary functions
+				// ---------------------------------------------
+				function movGhostThreeW(flag) {
+					if(posMatrix[(10 - ghostThree.position.y) - 1][(ghostThree.position.x + 25)] == 1 && flag == 1) {
+						ghostThree.position.y = yGhostThree + 1;
+						yGhostThree = ghostThree.position.y;
+						ghostThree.updateMatrix();
+						render();
+						return true;
+					} else if(flag == 0) {
+						ghostThree.position.y = yGhostThree + 1;
+						yGhostThree = ghostThree.position.y;
+						ghostThree.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				function movGhostThreeS(flag) {
+					if(posMatrix[(10 - ghostThree.position.y) + 1][(ghostThree.position.x + 25)] == 1 && flag == 1) {
+						ghostThree.position.y = yGhostThree - 1;
+						yGhostThree = ghostThree.position.y;
+						ghostThree.updateMatrix();
+						render();
+						return true;
+					} else if (flag == 0) {
+						ghostThree.position.y = yGhostThree - 1;
+						yGhostThree = ghostThree.position.y;
+						ghostThree.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				function movGhostThreeD(flag) {
+					if(posMatrix[(10 - ghostThree.position.y)][(ghostThree.position.x + 25) + 1] == 1 && flag == 1) {
+						ghostThree.position.x = xGhostThree + 1;
+						xGhostThree = ghostThree.position.x;
+						ghostThree.updateMatrix();
+						render();
+						return true;
+					} else if (flag == 0) {
+						ghostThree.position.x = xGhostThree + 1;
+						xGhostThree = ghostThree.position.x;
+						ghostThree.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				function movGhostThreeA(flag) {
+					if(posMatrix[(10 - ghostThree.position.y)][(ghostThree.position.x + 25) - 1] == 1 && flag == 1) {
+						ghostThree.position.x = xGhostThree - 1;
+						xGhostThree = ghostThree.position.x;
+						ghostThree.updateMatrix();
+						render();
+						return true;
+					} else if (flag == 0) {
+						ghostThree.position.x = xGhostThree - 1;
+						xGhostThree = ghostThree.position.x;
+						ghostThree.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				// ---------------------------------------------
+				// ghost four movement function
+				// ---------------------------------------------
+				var iFour = 0; // counter variable
+				var jFour = 0;  // this variable is responsible for determing the max steps of direction
+				var flagFour = 0; // flag used to verify when is necessary to create another random
+				var dirFour; // random direction to where the ghost should move
+				function ghostFourMovement() {
+					// hardcoded initial movements to set the ghost in the desired initial place
+					if(iFour == 0) {
+						movGhostFourW(0);
+						iFour++;
+					} else if(iFour == 1) {
+						movGhostFourW(0);
+						iFour++;
+					} else if(iFour == 2) {
+						movGhostFourW(0);
+						iFour++;
+					} else {
+						// generate a random number to set the direction movement
+						if(flagFour == 0) {
+							dirFour = genRandomNumber();
+							flagFour = 1;
+						}
+
+						// if j hits the limit change the direction of the ghost
+						if(jFour == 10){
+							jFour = 0;
+							flagFour = 0;
+						}
+
+						// moves ghost to the generated direction until it hits a wall
+						if(flagFour == 1) {
+							if(dirFour == 1){
+								if(!movGhostFourW(1)){
+									flagFour = 0;
+								}
+								jFour++;
+							}
+							if(dirFour == 2){
+								if(!movGhostFourA(1)){
+									flagFour = 0;
+								}
+								jFour++;
+							}
+							if(dirFour == 3){
+								if(!movGhostFourS(1)){
+									flagFour = 0;
+								}
+								jFour++;
+							}
+							if(dirFour == 4){
+								if(!movGhostFourD(1)){
+									flagFour = 0;
+								}
+								jFour++;
+							}
+						}
+					}
+
+					// call recursevely the function to keep ghost moving
+					setTimeout(ghostFourMovement, 100);
+				}
+
+				// ---------------------------------------------
+				// ghost four auxiliary functions
+				// ---------------------------------------------
+				function movGhostFourW(flag) {
+					if(posMatrix[(10 - ghostFour.position.y) - 1][(ghostFour.position.x + 25)] == 1 && flag == 1) {
+						ghostFour.position.y = yGhostFour + 1;
+						yGhostFour = ghostFour.position.y;
+						ghostFour.updateMatrix();
+						render();
+						return true;
+					} else if(flag == 0) {
+						ghostFour.position.y = yGhostFour + 1;
+						yGhostFour = ghostFour.position.y;
+						ghostFour.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				function movGhostFourS(flag) {
+					if(posMatrix[(10 - ghostFour.position.y) + 1][(ghostFour.position.x + 25)] == 1 && flag == 1) {
+						ghostFour.position.y = yGhostFour - 1;
+						yGhostFour = ghostFour.position.y;
+						ghostFour.updateMatrix();
+						render();
+						return true;
+					} else if (flag == 0) {
+						ghostFour.position.y = yGhostFour - 1;
+						yGhostFour = ghostFour.position.y;
+						ghostFour.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				function movGhostFourD(flag) {
+					if(posMatrix[(10 - ghostFour.position.y)][(ghostFour.position.x + 25) + 1] == 1 && flag == 1) {
+						ghostFour.position.x = xGhostFour + 1;
+						xGhostFour = ghostFour.position.x;
+						ghostFour.updateMatrix();
+						render();
+						return true;
+					} else if (flag == 0) {
+						ghostFour.position.x = xGhostFour + 1;
+						xGhostFour = ghostFour.position.x;
+						ghostFour.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				function movGhostFourA(flag) {
+					if(posMatrix[(10 - ghostFour.position.y)][(ghostFour.position.x + 25) - 1] == 1 && flag == 1) {
+						ghostFour.position.x = xGhostFour - 1;
+						xGhostFour = ghostFour.position.x;
+						ghostFour.updateMatrix();
+						render();
+						return true;
+					} else if (flag == 0) {
+						ghostFour.position.x = xGhostFour - 1;
+						xGhostFour = ghostFour.position.x;
+						ghostFour.updateMatrix();
+						render();
+						return true;
+					}
+					return false;
+				}
+
+				function genMazeLine(flag) {//// Three.js uses matrices to encode 3D transformations---translations (position), rotations, and scaling. Every instance of Object3D has a matrix which stores that object's position, rotation, and scale. This page describes how to update an object's transformation.
+					if(flag == 1) {
+						cube = new THREE.Mesh(geometryCube, materialCube);
+						cube.position.x = xPos;
+						cube.position.y = yPos;
+						cube.position.z = zPos;
+						cube.updateMatrix();//udate the atrix by this cube
+						cube.matrixAutoUpdate = false;//set to false to update it auto
+						scene.add(cube);
+
+						posMatrix[line][col] = 0;
+					} else {
+						var sName = 's' + xPos.toString() + yPos.toString();
+						sphere = new THREE.Mesh(geometrySphere, materialSphere);
+						sphere.position.x = xPos;
+						sphere.position.y = yPos;
+						sphere.position.z = zPos;
+						sphere.updateMatrix();
+						sphere.matrixAutoUpdate = false;
+						scene.add(sphere);
+
+						posMatrix[line][col] = 1;
+						sphere.name = sName;
+						numSphere += 1;
+					}
+					xPos += 1;
+				}
+
+				function deleteSphere(sName) {
+					var obj = scene.getObjectByName(sName);// String to match to the children's Object3D.name property.
+					if(obj != undefined) {//store in it data like line 1155
+						numSphere -= 1;
+						scene.remove(obj);
+
+
+					}
+					if(numSphere==0)
+					{
+						alert("you won!!!!");
+					}
+				}
+				function onKeyDown(event) {
+					var key = event.keyCode;
+
+					if(pacCanMove == 1) {
+						switch(key) {
+							case 38: // up key
+								if(posMatrix[(10 - pacman.position.y) - 1][(pacman.position.x + 25)] == 1 && keyPress >= 1) {
+									pacman.position.y = yPosPacman + 1;
+									yPosPacman = pacman.position.y;
+									pacman.updateMatrix();
+									var sName = 's' + pacman.position.x.toString() + pacman.position.y.toString();
+									deleteSphere(sName);
+									render();
+									keyPress = 0;
+								}
+								keyPress++;
+								break;
+							case 37: // left key
+								if(posMatrix[(10 - pacman.position.y)][(pacman.position.x + 25) - 1] == 1 && keyPress >= 1) {
+									pacman.position.x = xPosPacman - 1;
+									xPosPacman = pacman.position.x;
+									pacman.updateMatrix();
+									var sName = 's' + pacman.position.x.toString() + pacman.position.y.toString();
+									deleteSphere(sName);
+									render();
+									keyPress = 0;
+								}
+								keyPress++;
+								break;
+							case 40: // down key
+								if(posMatrix[(10 - pacman.position.y) + 1][(pacman.position.x + 25)] == 1 && keyPress >= 1) {
+									pacman.position.y = yPosPacman - 1;
+									yPosPacman = pacman.position.y;
+									pacman.updateMatrix();
+									var sName = 's' + pacman.position.x.toString() + pacman.position.y.toString();
+									deleteSphere(sName);
+									render();
+									keyPress = 0;
+								}
+								keyPress++;
+								break;
+							case 39: // right key
+								if(posMatrix[(10 - pacman.position.y)][(pacman.position.x + 25) + 1] == 1 && keyPress >= 1) {
+									pacman.position.x = xPosPacman + 1;
+									xPosPacman = pacman.position.x;
+									pacman.updateMatrix();
+									var sName = 's' + pacman.position.x.toString() + pacman.position.y.toString();
+									deleteSphere(sName);
+									render();
+									keyPress = 0;
+								}
+								keyPress++;
+								break;
+								//A key
+								case 65:
+									camera.position.x -= 10;
+								break;
+								//W key
+								case 87:
+									camera.position.y += 10;
+								break;
+								//D key
+								case 68:
+									camera.position.x += 10;
+								break;
+								//S key
+								case 83:
+									camera.position.y -= 10;
+								break;
+							default:
+								break;
+						}
+					}
+					coll_G1();
+					coll_G2();
+					coll_G2();
+					coll_G2();
+					renderer.render(scene,camera);
+
+				};
+				
+
+
+
+
+
+			}
+
+		// ---------------------------------------------
+				// ghost collision with pacman function
+				// ---------------------------------------------
+
+
+
+
+
+
+
+
+
+
+			function render() {
+
+				renderer.render( scene, camera );
+
+			}
+
+
+
+			function updateMazeGenPos() {
+				xPos = -25;
+				yPos -= 1;
+			}
+
+			function genRandomNumber() {
+				return Math.floor((Math.random() * 4) + 1);
+			}
+
+
+
+			function coll_G1(){
+
+			if(Pacman.position.x == ghostOne.position.x && Pacman.position.z == ghostOne.position.z)
+				{ 
+					scene.remove(Pacman);
+				alert("you lost!!!!!");
+				}
+
+			renderer.render(scene,camera);
+			};
+
+
+
+			function coll_G2(){
+					alert("hi")
+			if(Pacman.position.x == ghostTwo.position.x && Pacman.position.z == ghostTwo.position.z)
+				{ 
+					scene.remove(Pacman);
+					alert("you lost!!!!!");
+				}
+
+			renderer.render(scene,camera);
+			};
+
+
+
+			function coll_G3(){
+
+			if(Pacman.position.x == ghostThree.position.x && Pacman.position.z == ghostThree.position.z)
+				{ 
+					scene.remove(Pacman);
+					alert("you lost!!!!!");
+				}
+
+			renderer.render(scene,camera);
+			};
+
+
+
+			function coll_G4(){
+
+			if(Pacman.position.x == ghostfour.position.x && Pacman.position.z == ghostfour.position.z)
+				{ 
+					scene.remove(Pacman);
+					alert("you lost!!!!!");
+				}
+
+			renderer.render(scene,camera);
+			};
+
+
+		</script>
+
+	</body>
+</html>
